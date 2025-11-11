@@ -148,7 +148,7 @@ export default function Chatbot() {
                 {msg.document && msg.document.length > 0 && (
                   <div className="mt-3 space-y-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 px-1">
-                      📚 Sources ({msg.document.length})
+                       Sources ({msg.document.length})
                     </p>
                     {msg.document.map((doc, i) => (
                       <div
@@ -207,7 +207,7 @@ export default function Chatbot() {
                 ref={inputRef}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyUp={handleKeyPress}
                 placeholder="Ask anything about your document..."
                 disabled={isLoading}
                 className="pr-12 h-12 rounded-2xl border-gray-300 dark:border-gray-700 focus:border-violet-500 focus:ring-violet-500/20 shadow-sm"
