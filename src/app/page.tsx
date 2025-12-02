@@ -1,15 +1,24 @@
-import FileUpload from "@/Components/FileUpload";
+import Sidebar from "@/Components/Sidebar";
 import { ModeToggle } from "@/Components/modeToggle";
 import Chatbot from "@/Components/Chatbot";
+import { DotPattern } from "@/Components/magicui/dot-pattern";
+import { cn } from "@/lib/utils";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen w-screen ">
-      <ModeToggle />
-      <div className="w-[30vw] min-h-screen ">
-        <FileUpload />
-      </div>
-      <div className="w-[70vw] min-h-screen border-l-2">
+    <div className="flex h-screen w-full overflow-hidden bg-white dark:bg-gray-950">
+      <Sidebar />
+
+      <div className="flex-1 flex flex-col h-full relative">
+        <DotPattern
+          className={cn(
+            "[mask-image:radial-gradient(600px_circle_at_center,white,transparent)]",
+            "opacity-50 dark:opacity-30"
+          )}
+        />
+        <div className="absolute top-4 right-4 z-10">
+          <ModeToggle />
+        </div>
         <Chatbot />
       </div>
     </div>

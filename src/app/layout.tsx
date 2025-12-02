@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/Components/theme-provider"
 import {
   ClerkProvider,
+  SignInButton,
   SignUpButton,
   SignedIn,
   SignedOut,
@@ -25,40 +26,40 @@ export const metadata: Metadata = {
   description: "ChatyAI chat with your pdf image with OCR technology",
 };
 
+function Header() {
+  return (
+    <header className="text-[#6c47ff] bg-white dark:bg-gray-950 flex justify-between items-center p-4">
+      <SignedIn>
+        <UserButton />
+      </SignedIn>
+      <SignedOut>
+        <SignInButton />
+      </SignedOut>
+    </header>
+  )
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-<ClerkProvider>
-  <html lang="en" suppressHydrationWarning>
-    <header className="flex justify-end items-center p-4 gap-4 h-16">
-      <section className="w-screen min-h-screen flex items-center justify-center">
-            <SignedOut>
-              <SignUpButton>
-                <button className="bg-[#6c47ff] text-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
-                  Sign Up
-                </button>
-              </SignUpButton>
-          </SignedOut>
-          </section>
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
-        </header>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
           >
+            <Header />
             {children}
           </ThemeProvider>
-      </body>
-  </html>
-</ClerkProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
