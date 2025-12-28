@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
-import { SendIcon, Loader2Icon, FileTextIcon, UserIcon, BotIcon, PaperclipIcon, ArrowUpIcon } from 'lucide-react';
+import { SendIcon, Loader2Icon, FileTextIcon, UserIcon, BotIcon, PaperclipIcon, ArrowUpIcon, X, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,6 +41,7 @@ export default function Chatbot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [isUploading, setIsUploading] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<string | null>(null);
 
   const handleIconClick = () => {
     inputRef.current?.click()
@@ -67,13 +68,11 @@ export default function Chatbot() {
     if (user?.id && messages.length > 0) {
       localStorage.setItem(`chat_messages_${user.id}`, JSON.stringify(messages));
 
-      // Also update the chat list in Sidebar (via local storage event or shared key)
-      // For simplicity, we just ensure the "Recent Chat" exists
+      // Also update the chat list in Sidebar
       const chats = JSON.parse(localStorage.getItem(`chats_${user.id}`) || '[]');
       if (chats.length === 0) {
         const newChat = { id: 'default', title: 'Current Chat', date: new Date().toISOString() };
         localStorage.setItem(`chats_${user.id}`, JSON.stringify([newChat]));
-        // Dispatch event to notify Sidebar
         window.dispatchEvent(new Event('storage'));
       }
     }
@@ -96,7 +95,7 @@ export default function Chatbot() {
     if (!message.trim() || isLoading) return;
 
     if (!isSignedIn || !user) {
-      alert("Please sign in to chat.");
+      toast.error("Please sign in to chat.");
       return;
     }
 
@@ -146,23 +145,21 @@ export default function Chatbot() {
 
     const file = files[0]
 
-    // Only PDF
     if (file.type !== "application/pdf") {
-      console.log("Only PDF allowed")
-      alert("Only PDF allowed");
-      e.target.value = "" // reset
+      toast.error("Only PDF files are supported");
+      e.target.value = ""
       return
     }
 
     if (!isSignedIn || !user) {
-      alert("Please sign in to upload files.");
+      toast.error("Please sign in to upload files.");
       e.target.value = "";
       return;
     }
 
     const formData = new FormData()
-    formData.append("file", file)
     formData.append("userId", user.id)
+    formData.append("file", file)
 
     try {
       setIsUploading(true)
@@ -174,18 +171,17 @@ export default function Chatbot() {
       const data = await response.json()
 
       if (response.ok) {
-        console.log("upload success", data)
-        alert("File uploaded successfully!");
+        setAttachedFile(file.name);
+        toast.success(`${file.name} uploaded successfully!`);
       } else {
-        console.log("upload failed", data?.error)
-        alert(`Upload failed: ${data?.error}`);
+        toast.error(`Upload failed: ${data?.error}`);
       }
     } catch (err) {
-      console.log("error uploading file", err)
-      alert("Error uploading file");
+      console.error("error uploading file", err)
+      toast.error("Error uploading file");
     } finally {
       setIsUploading(false)
-      e.target.value = "" // same file dubara choose karne ke liye reset
+      e.target.value = ""
     }
   }
 
@@ -193,17 +189,19 @@ export default function Chatbot() {
     <div className="flex flex-col h-screen max-w-4xl mx-auto bg-gradient-to-br from-white via-gray-50 to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-black">
       {/* Header */}
       <div className="sticky top-0 z-50 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md border-b border-gray-200/50 dark:border-gray-800/50">
-        <div className="max-w-3xl mx-auto px-4 md:px-8 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg">
-            <BotIcon className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">
-              PDF Assistant
-            </h1>
-            <AnimatedShinyText className="text-sm text-gray-500 dark:text-gray-400">
-              Ask anything about your documents
-            </AnimatedShinyText>
+        <div className="max-w-3xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg">
+              <BotIcon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">
+                PDF Assistant
+              </h1>
+              <AnimatedShinyText className="text-sm text-gray-500 dark:text-gray-400">
+                Ask anything about your documents
+              </AnimatedShinyText>
+            </div>
           </div>
         </div>
       </div>
@@ -350,58 +348,88 @@ export default function Chatbot() {
 
       {/* Input Area */}
       <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent dark:from-gray-950 dark:via-gray-950 dark:to-transparent pt-8 pb-6 px-4 md:px-8 z-20 shadow-2xl">
-        <div className="max-w-3xl mx-auto relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50 focus-within:border-violet-500/50 focus-within:ring-4 focus-within:ring-violet-500/20 transition-all duration-300">
-          <div className="flex items-end p-4 gap-3">
-            {/* Hidden input */}
-            <input
-              ref={inputRef}
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={handleFileChange}
-            />
+        <div className="max-w-3xl mx-auto space-y-4">
+          {/* Attached File Indicator */}
+          <AnimatePresence>
+            {attachedFile && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="flex items-center gap-2 px-4 py-2 bg-violet-50 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-800 rounded-xl w-fit"
+              >
+                <FileTextIcon className="w-4 h-4 text-violet-500" />
+                <span className="text-sm font-medium text-violet-700 dark:text-violet-300 truncate max-w-[200px]">
+                  {attachedFile}
+                </span>
+                <button
+                  onClick={() => setAttachedFile(null)}
+                  className="p-1 hover:bg-violet-200 dark:hover:bg-violet-800 rounded-full transition-colors"
+                >
+                  <X className="w-3.5 h-3.5 text-violet-500" />
+                </button>
+                <Check className="w-3.5 h-3.5 text-green-500" />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="rounded-2xl h-12 w-12 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 shrink-0 shadow-md"
-              onClick={handleIconClick}
-              disabled={isUploading || isLoading}
-            >
-              <PaperclipIcon className="w-6 h-6" />
-            </Button>
+          <div className="relative bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50 focus-within:border-violet-500/50 focus-within:ring-4 focus-within:ring-violet-500/20 transition-all duration-300">
+            <div className="flex items-end p-4 gap-3">
+              <input
+                ref={inputRef}
+                type="file"
+                accept="application/pdf"
+                className="hidden"
+                onChange={handleFileChange}
+              />
 
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={isSignedIn ? "Message PDF Assistant..." : "Please sign in to chat..."}
-              disabled={isLoading || !isSignedIn}
-              rows={1}
-              className="flex-1 max-h-[200px] py-4 bg-transparent border-0 focus:ring-0 resize-none text-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none"
-              style={{ minHeight: "52px" }}
-            />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "rounded-2xl h-12 w-12 shrink-0 transition-all duration-300 shadow-md",
+                  attachedFile
+                    ? "text-violet-500 bg-violet-50 dark:bg-violet-900/20"
+                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                )}
+                onClick={handleIconClick}
+                disabled={isUploading || isLoading}
+              >
+                {isUploading ? <Loader2Icon className="w-6 h-6 animate-spin" /> : <PaperclipIcon className="w-6 h-6" />}
+              </Button>
 
-            <Button
-              onClick={handleChatMessage}
-              disabled={!message.trim() || isLoading || !isSignedIn}
-              className={cn(
-                "h-12 w-12 rounded-2xl shrink-0 transition-all duration-300 shadow-xl",
-                message.trim() && isSignedIn
-                  ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white shadow-violet-500/25"
-                  : "bg-gray-100/50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500"
-              )}
-            >
-              {isLoading ? (
-                <Loader2Icon className="w-6 h-6 animate-spin" />
-              ) : (
-                <ArrowUpIcon className="w-6 h-6" />
-              )}
-            </Button>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={isSignedIn ? "Message PDF Assistant..." : "Please sign in to chat..."}
+                disabled={isLoading || !isSignedIn}
+                rows={1}
+                className="flex-1 max-h-[200px] py-4 bg-transparent border-0 focus:ring-0 resize-none text-lg text-gray-900 dark:text-gray-100 placeholder:text-gray-400 outline-none"
+                style={{ minHeight: "52px" }}
+              />
+
+              <Button
+                onClick={handleChatMessage}
+                disabled={!message.trim() || isLoading || !isSignedIn}
+                className={cn(
+                  "h-12 w-12 rounded-2xl shrink-0 transition-all duration-300 shadow-xl",
+                  message.trim() && isSignedIn
+                    ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white shadow-violet-500/25"
+                    : "bg-gray-100/50 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500"
+                )}
+              >
+                {isLoading ? (
+                  <Loader2Icon className="w-6 h-6 animate-spin" />
+                ) : (
+                  <ArrowUpIcon className="w-6 h-6" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }
